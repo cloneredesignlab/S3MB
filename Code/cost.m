@@ -13,6 +13,8 @@ global chemoDose
 global resection_cav
 global dat_ploidy
 global path2params
+global mgmtStatus 
+global reduceMRIweight
 
 %% Fixed parameters
 tmp=readtable(path2params,'ReadRowNames',true,'ReadVariableNames',false);
@@ -24,7 +26,7 @@ MINCELLS2CAREABOUT=0.05*carryingCapacity;
 %     a_mig = pars(1:size(dat_ploidy,2));
 %     b_mig= pars((size(dat_ploidy,2)+1):(size(dat_ploidy,2)*2));
 %% 2D matrix of cell densities + 2D matrix of ploidies
-%   [TotalLiveCells,totalDeadCells, ~, ~, ~, ploidies]=S3MB(days, oxygen, glucose, radStart, radDose, chemoStart, chemoDose, stiff, resection_cav, after1st, dat_ploidy(1,:), path2params, 'a_mig',a_mig, 'b_mig', b_mig);
+%   [TotalLiveCells,totalDeadCells, ~, ~, ~, ploidies]=S3MB(days, oxygen, glucose, radStart, radDose, chemoStart, chemoDose, stiff, resection_cav, after1st, dat_ploidy(1,:), mgmtStatus{:}, path2params, 'a_mig',a_mig, 'b_mig', b_mig);
 
 %% Parameters to be optimized
 if size(dat_ploidy,2)==1
@@ -33,7 +35,7 @@ if size(dat_ploidy,2)==1
     Oth = pars((size(dat_ploidy,2)*2+1):(size(dat_ploidy,2)*3));
     delta_R = pars((size(dat_ploidy,2)*3+1):(size(dat_ploidy,2)*4));
     %% 2D matrix of cell densities + 2D matrix of ploidies
-    [TotalLiveCells,totalDeadCells, ~, ~, ~, ploidies]=S3MB(days, oxygen, glucose, radStart, radDose, chemoStart, chemoDose, stiff, resection_cav, after1st, dat_ploidy(1,:), path2params, 'alpha_death',alpha_death, 'v_max', v_max,'Oth',Oth,'delta_R',delta_R);
+    [TotalLiveCells,totalDeadCells, ~, ~, ~, ploidies]=S3MB(days, oxygen, glucose, radStart, radDose, chemoStart, chemoDose, stiff, resection_cav, after1st, dat_ploidy(1,:), mgmtStatus{:}, path2params, 'alpha_death',alpha_death, 'v_max', v_max,'Oth',Oth,'delta_R',delta_R);
 
 else
     alpha_death = pars(1:size(dat_ploidy,2));
@@ -43,7 +45,7 @@ else
     % disp(Oth)
     % disp(delta_R)
     %% 2D matrix of cell densities + 2D matrix of ploidies
-    [TotalLiveCells,totalDeadCells, ~, ~, ~, ploidies]=S3MB(days, oxygen, glucose, radStart, radDose, chemoStart, chemoDose, stiff, resection_cav, after1st, dat_ploidy(1,:), path2params, 'alpha_death',alpha_death, 'Oth', Oth,'delta_R',delta_R);
+    [TotalLiveCells,totalDeadCells, ~, ~, ~, ploidies]=S3MB(days, oxygen, glucose, radStart, radDose, chemoStart, chemoDose, stiff, resection_cav, after1st, dat_ploidy(1,:), mgmtStatus{:}, path2params, 'alpha_death',alpha_death, 'Oth', Oth,'delta_R',delta_R);
 end
 %% Ploidy distribution on day of second resection:
 ploidies= ploidies{days};
@@ -61,6 +63,9 @@ diff(diff>1) = 1./diff(diff>1);
 diff= (1- diff).^2;
 ii = find(live_dead + before2nd >=MINCELLS2CAREABOUT ); %% true negatives (regions without tumor correctly predicted as such) don't count, otherwise small tumors will have better fit
 diff = diff(ii);
+if reduceMRIweight
+    diff = diff*0.1;
+end
 
 %RMSE ploidy
 %     diff2= (ploidy-dat_ploidy(2,:)).^2;

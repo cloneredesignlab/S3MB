@@ -1,5 +1,9 @@
 function overlayAtlasTumor(stiff,TotalLiveCells, a)
 
+%% correct orientation to clinical standart
+stiff=flipud(stiff');
+TotalLiveCells=flipud(TotalLiveCells');
+
 if ~exist('a','var')
     a = tiledlayout(1,1);
 end

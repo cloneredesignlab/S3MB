@@ -3,7 +3,7 @@
 %Authors: Frederika, Giada, Thomas and Parag from Team Violet
 %11/1/2022
 %last update 12/13/2022
-function [TotalLiveCells, DeadCells, TotalGlucose, TotalOxygen, Vasc, N_all, allParameters, Diffusion]= S3MB(days, oxygen, glucose, radStart, radDose, chemoStart, chemoDose, imageStiff, resection_cav, after1st, n_ploidy, path2params, varargin)
+function [TotalLiveCells, DeadCells, TotalGlucose, TotalOxygen, Vasc, N_all, allParameters, Diffusion]= S3MB(days, oxygen, glucose, radStart, radDose, chemoStart, chemoDose, imageStiff, resection_cav, after1st, n_ploidy, mgmtStatus, path2params, varargin)
 
 p = inputParser;
 
@@ -79,16 +79,15 @@ for pop=1:length(n_ploidy)
     b_death(pop)=allParameters.beta_death(pop);    % glucose dependent death constant per cell type
     a_gamma(pop)=allParameters.alpha_gamma(pop);    % oxygen dependent growth constant per cell type
     b_gamma(pop)=allParameters.beta_gamma(pop);     % glucose dependent growth constant per cell type
-    a_mig(pop)=allParameters.a_mig(pop);    %biphasic migration rate constant 1 per cell type
+    v_max(pop)=allParameters.v_max(pop);     %biphasic migration rate constant 1: top migration speed based on cell type
     b_mig(pop)=allParameters.b_mig(pop);   %biphasic migration rate constant 2 per cell type
     c_r(pop)=allParameters.alpha_Tchemo(pop);    %oxygen dependence chemo driven cell death per cell type
 
     alpha(pop)=allParameters.alpha(pop);  % alpha in the linear quadratic equation of radiation sensitivity
     beta(pop)=allParameters.beta(pop);    % beta in the linear quadratic equation of radiation sensitivity
     rstar(pop)=allParameters.rstar(pop);    % linear quadratic equation of radiation sensitivity?
-    delta_chemo(pop)=allParameters.delta_Tchemo(pop);    %Chemo shrinkage rate (how effective chemo is killing tumor cells)
+    delta_chemo(pop)=getfield(allParameters, ['delta_Tchemo_',mgmtStatus], {pop});    %Chemo shrinkage rate (how effective chemo is killing tumor cells)
     delta_r(pop)=allParameters.delta_R(pop);    %Starvation shrinkage rate (how effective lack of resources is killing tumor cells)
-    v_max(pop)=allParameters.v_max(pop);     %top migration speed based on cell type (idea is higher ploidy makes it harder for cells to migrate, though that might not be necessarily true
 end
 
 %define cell type independent parameters
@@ -274,10 +273,8 @@ for t=1:days
                     for x=1:length(a)
                         for y=1:length(b)
                             if (a(x)~=i) || (b(y)~=j)
-                                %                                 k= v_max(ct) * exp(-a_mig(ct)*G(i,j)) * (1-exp(-b_mig(ct)*G(i,j))) * ...
-                                %                                     (Stiff(a(x), b(y))<Stiff(1,1))*(Stiff(a(x), b(y))>500) * (-0.25e-6*(Stiff(a(x),b(y)))^2+1.25e-3*(Stiff(a(x),b(y)))-0.5625);   %migration rate from i,j to a, b
-
-                                k= v_max(ct) * exp(-a_mig(ct)*G(i,j)) * (1-exp(-b_mig(ct)*G(i,j))) * ...
+                                % k= v_max(ct) * exp(-a_mig(ct)*G(i,j)) * (1-exp(-b_mig(ct)*G(i,j))) * ...
+                                k= v_max(ct) * log10(1+G(i,j)) / (G(i,j)^b_mig(ct)) * ...
                                     (Stiff(a(x), b(y))<Stiff(1,1))*(Stiff(a(x), b(y))>500) * (c_2*(Stiff(a(x),b(y)))^2+c_3*(Stiff(a(x),b(y))));   %migration rate from i,j to a, b. follows David Odde's 2022 Nat Matl paper.
 
                                 cellsmigratingto{ct}(a(x),b(y))=cellsmigratingto{ct}(a(x),b(y))+k*N{ct}(i,j);     % number of cell migrated to a, b... will get updated for all i, j (all neighbors of a, b)
@@ -312,8 +309,8 @@ end
 % N{ct} has all the relevant cell population numbers for the time point t
 
 % some specific counters for plotting and analysis (@Tommy might know these better)
-heatMat=(heatMat+TotalLiveCells{days});
-liveCellPlotter=(liveCellPlotter+cellfun(@(x) sum(x, 'all'), TotalLiveCells));
+% heatMat=(heatMat+TotalLiveCells{days});
+% liveCellPlotter=(liveCellPlotter+cellfun(@(x) sum(x, 'all'), TotalLiveCells));
 % N1CellPlotter=(N1CellPlotter+cellfun(@(x) sum(x, 'all'), N1ploidyCells));
 % N2CellPlotter=(N2CellPlotter+cellfun(@(x) sum(x, 'all'), N2ploidycells));
 
